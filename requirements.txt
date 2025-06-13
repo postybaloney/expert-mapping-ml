@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+openai
+faiss-cpu
+neo4j
+requests
+beautifulsoup4
+python-dotenv
+openai
+langchain
+python-dotenv
+tqdm
