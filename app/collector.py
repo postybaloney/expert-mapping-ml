@@ -89,7 +89,7 @@ def save_json(data, filename):
         json.dump(data, f, indent=2)
 
 if __name__ == "__main__": # COME BACK TO THIS
-    fetch_medium_articles("machine-learning-made-simple")
+    # fetch_medium_articles("machine-learning-made-simple")
     for gh_user in tqdm(GITHUB_USERS):
         try:
             # print(f"Processing GitHub user: {gh_user}")
