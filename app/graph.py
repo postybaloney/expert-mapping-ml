@@ -16,6 +16,7 @@ def load_profile(filepath):
     with open(filepath, "r", encoding="utf-8") as f:
         raw = json.load(f)
         if isinstance(raw, str):
+            print("Issue with profile format, trying to parse as JSON")
             return json.loads(raw)
         return raw
     
@@ -33,11 +34,12 @@ def create_expert(tx, username, profile):
                """, username=username, skill=skill)
         
     for contribution in profile['notable_contributions']:
-        tx.run("""
-               MERGE (p:Project {name: $name, url: $url})
-               MERGE (e:Expert {username: $username})
-               Merge (e)-[:CONTRIBUTED_TO]->(p)
-               """, username=username, name=contribution['project'], url=contribution['url'])
+        if contribution['url']:
+            tx.run("""
+                MERGE (p:Project {name: $name, url: $url})
+                MERGE (e:Expert {username: $username})
+                Merge (e)-[:CONTRIBUTED_TO]->(p)
+                """, username=username, name=contribution['project'], url=contribution['url'])
         
 def ingest_profiles(data_dir):
     for path in Path(data_dir).glob("*_profile.json"):
