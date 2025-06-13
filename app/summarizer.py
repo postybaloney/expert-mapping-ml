@@ -16,15 +16,15 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Set your OpenAI API key as an en
 
 class Contribution(BaseModel):
     project: str = Field(..., description="Name of the project or contribution")
-    description: Optional[str] = Field(..., description="Brief description of the contribution")
-    url: Optional[str] = Field(..., description="Link to the project or contribution")
+    description: Optional[str] = Field(None, description="Brief description of the contribution")
+    url: Optional[str] = Field(None, description="Link to the project or contribution")
 
 class ExpertProfile(BaseModel):
     expertise: str = Field(..., description="Expertise in machine learning")
-    top_skills: Optional[List[str]] = Field(..., description="Top skills in machine learning")
-    notable_contributions: Optional[List[Contribution]] = Field(..., description="Notable contributions to machine learning")
-    references: Optional[List[dict]] = Field(..., description="Links to any references or publications")
-    other_information: Optional[dict] = Field(..., description="Any other relevant information about the expert")
+    top_skills: Optional[List[str]] = Field(None, description="Top skills in machine learning")
+    notable_contributions: Optional[List[Contribution]] = Field(None, description="Notable contributions to machine learning")
+    references: Optional[List[dict]] = Field(None, description="Links to any references or publications")
+    other_information: Optional[dict] = Field(None, description="Any other relevant information about the expert")
 
 llm = ChatOpenAI(temperature=0, model="gpt-4", openai_api_key=OPENAI_API_KEY)
 
@@ -63,9 +63,9 @@ def summarize_expert(username: str):
         raise e
     
     with open(f"data/raw/{username}_profile.json", "w", encoding="utf-8") as outfile:
-        json.dump(parsed_response.model_dump_json(), outfile, indent=2)
+        json.dump(parsed_response.model_dump(), outfile, indent=2)
 
-    print(f"Profile for {username} summarized and saved to data/raw/{username}_profile.json")
+    print(f"\nProfile for {username} summarized and saved to data/raw/{username}_profile.json")
 
 
 if __name__ == "__main__":
