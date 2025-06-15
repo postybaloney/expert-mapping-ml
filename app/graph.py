@@ -3,11 +3,19 @@ import json
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import openai
 load_dotenv()
 
 NEO4J_URI = os.getenv("NEO4J_URI")
 NEO4J_USER = os.getenv("NEO4J_USER")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+def embed_profile(profile):
+    text = profile['expertise'] + " " + " ".join(profile['top_skills'])
+    response = openai.embeddings.create(input=[text], model="text-embedding-3-small")
+    return response.data[0].embedding
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 driver.verify_connectivity()
@@ -20,11 +28,21 @@ def load_profile(filepath):
             return json.loads(raw)
         return raw
     
-def create_expert(tx, username, profile):
+def create_expert(tx, username, profile, vector):
     tx.run("""
            MERGE (e:Expert {username: $username})
            Set e.expertise = $expertise
-           """, username=username, expertise=profile['expertise'])
+           Set e.vector = $vector
+           """, username=username, expertise=profile['expertise'], vector = vector)
+    
+    tx.run("""
+           MERGE (e:Expert)
+           Set e.experience_level = CASE
+            WHEN size((e)-[:CONTRIBUTED_TO]->()) >= 10 THEN 'senior'
+            WHEN size((e)-[:CONTRIBUTED_TO]->()) >= 5 THEN 'mid-level'
+            ELSE 'junior'
+           SET e.project_count = size((e)-[:CONTRIBUTED_TO]->()),
+              e.skill_count = size((e)-[:HAS_SKILL]->())""")
     
     for skill in profile['top_skills']:
         tx.run("""
@@ -45,8 +63,9 @@ def ingest_profiles(data_dir):
     for path in Path(data_dir).glob("*_profile.json"):
         username = path.stem.replace("_profile", "")
         profile = load_profile(path)
+        vector = embed_profile(profile)
         with driver.session() as session:
-            session.execute_write(create_expert, username, profile)
+            session.execute_write(create_expert, username, profile, vector)
         print(f"Ingested profile for {username}")
 
 if __name__ == "__main__":
