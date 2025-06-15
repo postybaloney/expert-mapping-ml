@@ -122,35 +122,41 @@ def get_expert_profile(username: str):
         return profile.data()
 
 @app.post("/search")
-def search_experts(query: str, page: int = 1, page_size: int = 10, filter_skill: Optional[str] = None, experience: Optional[str] = None, sort_by: Optional[str] = None):
+def search_experts(query: str, page: int = 1, page_size: int = 10, filter_skill: Optional[str] = None, experience: Optional[str] = None, sort_by: Optional[str] = None): # Experience takes junior, mid-level, senior, Sort_by takes project_count, skill_count
     try:
         q_emb = embed_query(query)
         offset = (page - 1) * page_size
 
-        where_clauses = []
+        allowed_sort_fields = {"exp_score", "skill_count", "project_count"}
+        sort_field = sort_by if sort_by in allowed_sort_fields else "exp_score"
+
+        where_clauses = ["id(e) = id(node)"]
         if filter_skill:
             where_clauses.append("EXISTS {MATCH (e)-[:HAS_SKILL]->(s:Skill {name: $filter_skill}) }")
         if experience:
             where_clauses.append("e.experience_level = $experience")
-        where_block = " AND ".join(where_clauses)
-        if where_block:
-            where_block = "WHERE " + where_block
+        where_block = "WHERE " + " AND ".join(where_clauses)
 
         with driver.session() as session:
             results = session.run(
                 f"""
                 CALL db.index.vector.queryNodes('expert_vector_index', $k, $embedding)
                 YIELD node, score
-                MATCH (e:Expert) WHERE id(e) = id(node)
+                MATCH (e:Expert)
                 {where_block}
+                WITH e, 
+                    node,
+                    score,
+                    size([ (e)-[:HAS_SKILL]->(s) | s ]) AS skill_count,
+                    size([ (e)-[:CONTRIBUTED_TO]->(p) | p ]) AS project_count
                 RETURN 
                     node.username as username,
                     node.expertise as expertise,
                     node.vector as vector,
                     [ (node)-[:HAS_SKILL]->(s) | s.name ] as skills,
-                    [ (node)-[:CONTRIBUTED_TO]->(p) | {name: p.name, description: p.description, url: p.url, vector: p.vector} ] as projs,
+                    [ (node)-[:CONTRIBUTED_TO]->(p) | {{name: p.name, description: p.description, url: p.url, vector: p.vector}} ] as projs,
                     score as exp_score
-                ORDER BY {sort_by or 'exp_score'} DESC
+                ORDER BY {sort_field} DESC
                 SKIP $offset
                 LIMIT $limit
                 """,
@@ -158,7 +164,9 @@ def search_experts(query: str, page: int = 1, page_size: int = 10, filter_skill:
                     "k": 100, # Search depth, k-nearest neighbors
                     "embedding": q_emb,
                     "offset": offset,
-                    "limit": page_size
+                    "limit": page_size,
+                    "filter_skill": filter_skill,
+                    "experience": experience
                 }
             )
             hits = []
@@ -172,6 +180,9 @@ def search_experts(query: str, page: int = 1, page_size: int = 10, filter_skill:
                 # 3. Project ranking
                 proj_list = []
                 for p in projects:
+                    if not isinstance(p, dict):
+                        print(p, "is not a dict, skipping")
+                        continue
                     desc = p["description"] or ""
                     name = p["name"]
                     p_emb = p.get("vector")
@@ -235,3 +246,9 @@ def search_experts(query: str, page: int = 1, page_size: int = 10, filter_skill:
 #     except Exception as e:
 #         traceback.print_exc()
 #         raise HTTPException(status_code=500, detail=str(e))
+
+# MATCH (e:Expert {username: $username})-[:HAS_SKILL]->(s:Skill)<-[:HAS_SKILL]-(similar:Expert)
+# WHERE e <> similar
+# RETURN similar.username as username, count(s) as shared_skills
+# ORDER BY shared_skills DESC
+# LIMIT 5
