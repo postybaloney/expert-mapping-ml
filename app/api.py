@@ -217,38 +217,32 @@ def search_experts(query: str, page: int = 1, page_size: int = 10, filter_skill:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     
-# @app.get("/expert/{username}/similar")
-# def get_similar_experts(username: str, k: int = 5):
-#     try:
-#         with driver.session() as session:
-#             # Get the expert's vector
-#             result = session.run("""
-#                 MATCH (e:Expert {username: $username})
-#                 RETURN e.vector AS vector
-#             """, username=username)
-#             expert = result.single()
-#             if not expert:
-#                 raise HTTPException(status_code=404, detail="Expert not found")
-#             expert_vector = expert["vector"]
+@app.get("/expert/{username}/similar")
+def get_similar_experts(username: str, k: int = 5):
+    try:
+        with driver.session() as session:
+            # Get the expert's vector
+            result = session.run("""
+                MATCH (e:Expert {username: $username})
+                RETURN e.vector AS vector
+            """, username=username)
+            expert = result.single()
+            if not expert:
+                raise HTTPException(status_code=404, detail="Expert not found")
+            expert_vector = expert["vector"]
 
-#             # Find similar experts
-#             results = session.run("""
-#                 CALL db.index.vector.queryNodes('expert_vector_index', $k, $embedding)
-#                 YIELD node, score
-#                 MATCH (e:Expert) WHERE id(e) = id(node)
-#                 RETURN e.username AS username, e.expertise AS expertise, score AS similarity_score
-#             """, k=k, embedding=expert_vector)
+            # Find similar experts
+            results = session.run("""
+                CALL db.index.vector.queryNodes('expert_vector_index', $k, $embedding)
+                YIELD node, score
+                MATCH (e:Expert) WHERE id(e) = id(node)
+                RETURN e.username AS username, e.expertise AS expertise, score AS similarity_score
+            """, k=k, embedding=expert_vector)
 
-#             similar_experts = [record.data() for record in results]
-#             if not similar_experts:
-#                 raise HTTPException(status_code=404, detail="No similar experts found")
-#             return {"username": username, "similar_experts": similar_experts}
-#     except Exception as e:
-#         traceback.print_exc()
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# MATCH (e:Expert {username: $username})-[:HAS_SKILL]->(s:Skill)<-[:HAS_SKILL]-(similar:Expert)
-# WHERE e <> similar
-# RETURN similar.username as username, count(s) as shared_skills
-# ORDER BY shared_skills DESC
-# LIMIT 5
+            similar_experts = [record.data() for record in results]
+            if not similar_experts:
+                raise HTTPException(status_code=404, detail="No similar experts found")
+            return {"username": username, "similar_experts": similar_experts}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

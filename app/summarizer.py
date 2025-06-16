@@ -67,8 +67,20 @@ def summarize_expert(username: str):
 
     print(f"\nProfile for {username} summarized and saved to data/raw/{username}_profile.json")
 
+def profile_creation():
+    usable_usernames = []
+    all_usernames = list(DATA_DIR.glob("*_ml*.json"))
+    for user in all_usernames:
+        usable_usernames.append(str(user)[9:str(user).find("_")])
+
+    for user in tqdm(usable_usernames):
+        summarize_expert(user)
 
 if __name__ == "__main__":
-    usernames = ["karpathy", "lucidrains", "3494126"]
-    for user in tqdm(usernames):
+    usable_usernames = []
+    all_usernames = list(DATA_DIR.glob("*_ml*.json"))
+    for user in all_usernames:
+        usable_usernames.append(str(user)[9:str(user).find("_")])
+
+    for user in tqdm(usable_usernames):
         summarize_expert(user)

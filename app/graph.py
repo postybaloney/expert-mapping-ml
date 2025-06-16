@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 import openai
+import random
 load_dotenv()
 
 NEO4J_URI = os.getenv("NEO4J_URI")
@@ -13,9 +14,10 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def embed_profile(profile):
-    text = profile['expertise'] + " " + " ".join(profile['top_skills'])
-    response = openai.embeddings.create(input=[text], model="text-embedding-3-small")
-    return response.data[0].embedding
+    # text = profile['expertise'] + " " + " ".join(profile['top_skills'])
+    # response = openai.embeddings.create(input=[text], model="text-embedding-3-small")
+    # return response.data[0].embedding
+    return [random.random() for _ in range(1536)]
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 driver.verify_connectivity()
@@ -36,13 +38,18 @@ def create_expert(tx, username, profile, vector):
            """, username=username, expertise=profile['expertise'], vector = vector)
     
     tx.run("""
-           MERGE (e:Expert)
-           Set e.experience_level = CASE
-            WHEN size((e)-[:CONTRIBUTED_TO]->()) >= 10 THEN 'senior'
-            WHEN size((e)-[:CONTRIBUTED_TO]->()) >= 5 THEN 'mid-level'
+        MATCH (e:Expert {username: $username})
+        WITH e,
+         COUNT { (e)-[:CONTRIBUTED_TO]->() } AS contribution_count,
+         COUNT { (e)-[:HAS_SKILL]->() } AS skill_count
+        SET e.experience_level = CASE
+            WHEN contribution_count >= 10 THEN 'senior'
+            WHEN contribution_count >= 5 THEN 'mid-level'
             ELSE 'junior'
-           SET e.project_count = size((e)-[:CONTRIBUTED_TO]->()),
-              e.skill_count = size((e)-[:HAS_SKILL]->())""")
+        END,
+        e.project_count = contribution_count,
+        e.skill_count = skill_count
+    """, username=username)
     
     for skill in profile['top_skills']:
         tx.run("""
