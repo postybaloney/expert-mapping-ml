@@ -230,3 +230,7 @@ Response:
   ]
 }
 ```
+
+Neo4j Graph Visualizations:
+![Skill Visualization](image.png)
+![Contribution Visualization](image-1.png)
