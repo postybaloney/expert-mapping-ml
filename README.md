@@ -161,7 +161,9 @@ curl -X 'POST' \
 
 10.2. "/experts/by-skill/{skill_name}"
 Query: "experts/by-skill/PyTorch"
-Response: {
+Response: 
+```txt
+{
     "skill":"PyTorch","experts":[
         {
             "username":"lucidrains",
@@ -173,10 +175,13 @@ Response: {
         }
     ]
 }
+```
 
 10.3. "/experts/{username}"
 Query: "/experts/bigdataturkey"
-Response: {
+Response: 
+```txt
+{
     "username":"bigdataturkey",
     "expertise":"Big Data and Machine Learning",
     "top_skills":[
@@ -214,3 +219,4 @@ Response: {
     }
   ]
 }
+```
