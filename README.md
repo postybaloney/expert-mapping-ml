@@ -160,7 +160,12 @@ curl -X 'POST' \
 ```
 
 10.2. "/experts/by-skill/{skill_name}"
-Query: "experts/by-skill/PyTorch"
+Query:
+```curl
+curl -X 'GET' \
+  'http://127.0.0.1:8000/experts/by-skill/PyTorch' \
+  -H 'accept: application/json'
+```
 Response: 
 ```txt
 {
@@ -178,7 +183,12 @@ Response:
 ```
 
 10.3. "/experts/{username}"
-Query: "/experts/bigdataturkey"
+Query: 
+```curl
+curl -X 'GET' \
+  'http://127.0.0.1:8000/experts/bigdataturkey' \
+  -H 'accept: application/json'
+```
 Response: 
 ```txt
 {
